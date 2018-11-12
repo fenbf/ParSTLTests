@@ -20,7 +20,7 @@ template <typename TFunc> void RunAndMeasure(const char* title, TFunc func)
 		const auto start = std::chrono::steady_clock::now();
 		const auto ret = func();
 		const auto end = std::chrono::steady_clock::now();
-		results.push_back(ret);
+		results[i] = ret;
 		times.insert(std::chrono::duration<double, std::milli>(end - start).count());
 	}
 
@@ -49,7 +49,7 @@ void TestTrig(const size_t vecSize)
 			return std::sqrt(std::sin(v)*std::cos(v));
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("std::transform seq", [&vec, &out] {
@@ -58,7 +58,7 @@ void TestTrig(const size_t vecSize)
 			return std::sqrt(std::sin(v)*std::cos(v));
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("std::transform par", [&vec, &out] {
@@ -67,7 +67,7 @@ void TestTrig(const size_t vecSize)
 			return std::sqrt(std::sin(v)*std::cos(v));
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("omp parallel for", [&vec, &out] {
@@ -75,7 +75,7 @@ void TestTrig(const size_t vecSize)
 		for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
 			out[i] = std::sqrt(::sin(vec[i])*std::cos(vec[i]));
 
-		return out.size();
+		return out[0];
 	});
 
 	//RunAndMeasure("using raw loop  ", [&vec, &out] {
@@ -100,7 +100,7 @@ void TestDoubleValue(const size_t vecSize)
 			return v * 2.0;
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("std::transform seq", [&vec, &out] {
@@ -109,7 +109,7 @@ void TestDoubleValue(const size_t vecSize)
 			return v*2.0;
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("std::transform par", [&vec, &out] {
@@ -118,7 +118,7 @@ void TestDoubleValue(const size_t vecSize)
 			return v*2.0;
 		}
 		);
-		return out.size();
+		return out[0];
 	});
 
 	RunAndMeasure("omp parallel for", [&vec, &out] {
@@ -126,7 +126,7 @@ void TestDoubleValue(const size_t vecSize)
 		for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
 			out[i] = vec[i]*2.0;
 
-		return out.size();
+		return out[0];
 	});
 
 	//RunAndMeasure("using raw loop  ", [&vec, &out] {
@@ -182,7 +182,7 @@ void TestFresnel(const size_t vecSize)
 			return fresnel(v, n, 1.0f);
 		}
 		);
-		return vecFresnelTerms.size();
+		return vecFresnelTerms[0];
 	});
 
 	RunAndMeasure("std::transform seq", [&vec, &vecNormals, &vecFresnelTerms] {
@@ -191,7 +191,7 @@ void TestFresnel(const size_t vecSize)
 			return fresnel(v, n, 1.0f);
 		}
 		);
-		return vecFresnelTerms.size();
+		return vecFresnelTerms[0];
 	});
 
 	RunAndMeasure("std::transform par", [&vec, &vecNormals, &vecFresnelTerms] {
@@ -200,7 +200,7 @@ void TestFresnel(const size_t vecSize)
 			return fresnel(v, n, 1.0f);
 		}
 		);
-		return vecFresnelTerms.size();
+		return vecFresnelTerms[0];
 	});
 
 	RunAndMeasure("omp parallel for", [&vec, &vecNormals, &vecFresnelTerms] {
@@ -208,7 +208,7 @@ void TestFresnel(const size_t vecSize)
 		for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
 			vecFresnelTerms[i] = fresnel(vec[i], vecNormals[i], 1.0f);
 
-		return vecFresnelTerms.size();
+		return vecFresnelTerms[0];
 	});
 
 	//RunAndMeasure("using raw loop  ", [&vec, &vecNormals, &vecFresnelTerms] {
