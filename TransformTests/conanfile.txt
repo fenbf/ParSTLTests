@@ -1,0 +1,5 @@
+[requires]
+glm/0.9.9.1@g-truc/stable 
+
+[generators]
+visual_studio
