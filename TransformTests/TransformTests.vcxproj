@@ -98,7 +98,6 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <OpenMPSupport>true</OpenMPSupport>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <OpenMP>None</OpenMP>
       <CCppSupport>Cpp17Support</CCppSupport>
       <LanguageStandard>stdcpplatest</LanguageStandard>

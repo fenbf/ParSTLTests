@@ -8,6 +8,7 @@
 #include <random>
 #include "glm/vec4.hpp" // glm::vec4
 #include "glm/geometric.hpp"
+#include "glm/gtc/constants.hpp"
 
 constexpr int RUN_TIMES = 5;
 
@@ -27,74 +28,23 @@ template <typename TFunc> void RunAndMeasure(const char* title, TFunc func)
 	std::cout << title << ":\t " << *times.begin() << "ms (max was " << *times.rbegin() << ") " << results[0] << '\n';
 }
 
-float GenRandomFloat() 
+float GenRandomFloat(float lower, float upper) 
 {
 	// usage of thread local random engines allows running the generator in concurrent mode
 	thread_local static std::default_random_engine rd;
-	std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+	std::uniform_real_distribution<float> dist(lower, upper);
 	return dist(rd);
-}
-
-void TestTrig(const size_t vecSize)
-{
-	std::vector<double> vec(vecSize, 0.5);
-	std::generate(vec.begin(), vec.end(), GenRandomFloat);
-	std::vector out(vec);
-
-	std::cout << "sin*cos:\n";
-
-	RunAndMeasure("std::transform", [&vec, &out] {
-		std::transform(vec.begin(), vec.end(), out.begin(),
-			[](double v) {
-			return std::sqrt(std::sin(v)*std::cos(v));
-		}
-		);
-		return out[0];
-	});
-
-	RunAndMeasure("std::transform seq", [&vec, &out] {
-		std::transform(std::execution::seq, vec.begin(), vec.end(), out.begin(),
-			[](double v) {
-			return std::sqrt(std::sin(v)*std::cos(v));
-		}
-		);
-		return out[0];
-	});
-
-	RunAndMeasure("std::transform par", [&vec, &out] {
-		std::transform(std::execution::par, vec.begin(), vec.end(), out.begin(),
-			[](double v) {
-			return std::sqrt(std::sin(v)*std::cos(v));
-		}
-		);
-		return out[0];
-	});
-
-	RunAndMeasure("omp parallel for", [&vec, &out] {
-		#pragma omp parallel for
-		for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
-			out[i] = std::sqrt(::sin(vec[i])*std::cos(vec[i]));
-
-		return out[0];
-	});
-
-	//RunAndMeasure("using raw loop  ", [&vec, &out] {
-	//	for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
-	//		out[i] = std::sqrt(std::sin(vec[i])*std::cos(vec[i]));
-
-	//	return out.size();
-	//});
 }
 
 void TestDoubleValue(const size_t vecSize)
 {
 	std::vector<double> vec(vecSize, 0.5);
-	std::generate(vec.begin(), vec.end(), GenRandomFloat);
+	std::generate(vec.begin(), vec.end(), []() { return GenRandomFloat(-1.0f, 1.0f); });
 	std::vector out(vec);
 
 	std::cout << "v*2:\n";
 
-	RunAndMeasure("std::transform", [&vec, &out] {
+	RunAndMeasure("std::transform   ", [&vec, &out] {
 		std::transform(vec.begin(), vec.end(), out.begin(),
 			[](double v) {
 			return v * 2.0;
@@ -137,6 +87,58 @@ void TestDoubleValue(const size_t vecSize)
 	//});
 }
 
+void TestTrig(const size_t vecSize)
+{
+	std::vector<double> vec(vecSize, 0.5);
+	std::generate(vec.begin(), vec.end(), []() { return GenRandomFloat(0.0f, 0.5f*glm::pi<float>()); });
+	std::vector out(vec);
+
+	std::cout << "sqrt(sin*cos):\n";
+
+	RunAndMeasure("std::transform   ", [&vec, &out] {
+		std::transform(vec.begin(), vec.end(), out.begin(),
+			[](double v) {
+			// we need to watch for the negative values! as sqrt will generate a domain error....
+			return std::sqrt(std::sin(v)*std::cos(v));
+		}
+		);
+		return out[0];
+	});
+
+	RunAndMeasure("std::transform seq", [&vec, &out] {
+		std::transform(std::execution::seq, vec.begin(), vec.end(), out.begin(),
+			[](double v) {
+			return std::sqrt(std::sin(v)*std::cos(v));
+		}
+		);
+		return out[0];
+	});
+
+	RunAndMeasure("std::transform par", [&vec, &out] {
+		std::transform(std::execution::par, vec.begin(), vec.end(), out.begin(),
+			[](double v) {
+			return std::sqrt(std::sin(v)*std::cos(v));
+		}
+		);
+		return out[0];
+	});
+
+	RunAndMeasure("omp parallel for", [&vec, &out] {
+#pragma omp parallel for
+		for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
+			out[i] = std::sqrt(::sin(vec[i])*std::cos(vec[i]));
+
+		return out[0];
+	});
+
+	//RunAndMeasure("using raw loop  ", [&vec, &out] {
+	//	for (int i = 0; i < static_cast<int>(vec.size()); ++i) //  'i': index variable in OpenMP 'for' statement must have signed integral type
+	//		out[i] = std::sqrt(std::sin(vec[i])*std::cos(vec[i]));
+
+	//	return out.size();
+	//});
+}
+
 // implementation taken from
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
 
@@ -166,17 +168,17 @@ void TestFresnel(const size_t vecSize)
 {
 	std::vector<glm::vec4> vec(vecSize, { 0.0f, 1.0f, 0.0f, 1.0f });
 	std::generate(vec.begin(), vec.end(), []() {
-		return glm::vec4(GenRandomFloat(), GenRandomFloat(), GenRandomFloat(), 1.0f);
+		return glm::vec4(GenRandomFloat(-1.0f, 1.0f), GenRandomFloat(-1.0f, 1.0f), GenRandomFloat(-1.0f, 1.0f), 1.0f);
 	});
 	std::vector<glm::vec4> vecNormals(vecSize, { 1.0f, 0.0f, 0.0f, 1.0f });
 	std::generate(vec.begin(), vec.end(), []() {
-		return glm::vec4(GenRandomFloat(), GenRandomFloat(), GenRandomFloat(), 1.0f);
+		return glm::vec4(GenRandomFloat(-1.0f, 1.0f), GenRandomFloat(-1.0f, 1.0f), GenRandomFloat(-1.0f, 1.0f), 1.0f);
 	});
 	std::vector<float> vecFresnelTerms(vecSize);
 
-	std::cout << "vec4:\n";
+	std::cout << "fresnel:\n";
 
-	RunAndMeasure("std::transform ", [&vec, &vecNormals, &vecFresnelTerms] {
+	RunAndMeasure("std::transform   ", [&vec, &vecNormals, &vecFresnelTerms] {
 		std::transform(vec.begin(), vec.end(), vecNormals.begin(), vecFresnelTerms.begin(),
 			[](const glm::vec4& v, const glm::vec4& n) {
 			return fresnel(v, n, 1.0f);
@@ -221,13 +223,24 @@ void TestFresnel(const size_t vecSize)
 
 int main(int argc, char* argv[])
 {
+#ifdef _DEBUG
+	const size_t vecSize = argc > 1 ? atoi(argv[1]) : 10000;
+#else
 	const size_t vecSize = argc > 1 ? atoi(argv[1]) : 6000000;
+#endif
 	std::cout << vecSize << '\n';
 	std::cout << "Running each test " << RUN_TIMES << " times\n";
 	
-	TestDoubleValue(vecSize);
-	TestTrig(vecSize);
-	TestFresnel(vecSize);
+	int step = argc > 2 ? atoi(argv[2]) : 0;
+
+	if (step == 0 || step == 1)
+		TestDoubleValue(vecSize);
+	
+	if (step == 0 || step == 2)
+		TestTrig(vecSize);
+	
+	if (step == 0 || step == 3)
+		TestFresnel(vecSize);
 
 	return 0;
 }
